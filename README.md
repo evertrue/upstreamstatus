@@ -1,8 +1,6 @@
 # Upstreamstatus
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/upstreamstatus`. To experiment with that code, run `bin/console` for an interactive prompt.
-
-TODO: Delete this and the text above, and describe your gem
+A really lightweight Gem to get a yes or no answer about whether or not one of your hosts is down according to [The Upstream Status Check Module](https://github.com/yaoweibin/nginx_upstream_check_module)
 
 ## Installation
 
