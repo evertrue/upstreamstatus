@@ -1,0 +1,4 @@
+require 'rubygems'
+require 'upstream-status'
+
+Upstreamstatus.new.run
