@@ -2,6 +2,7 @@ require 'upstreamstatus/version'
 require 'unirest'
 require 'yaml'
 require 'ostruct'
+require 'forwardable'
 
 module Upstreamstatus
   extend Forwardable
