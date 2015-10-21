@@ -4,7 +4,7 @@ require 'yaml'
 require 'ostruct'
 require 'forwardable'
 
-module Upstreamstatus
+class Upstreamstatus
   extend Forwardable
 
   def_delegators :@conf,
