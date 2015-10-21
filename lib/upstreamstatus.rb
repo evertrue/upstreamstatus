@@ -1,11 +1,10 @@
 require 'upstreamstatus/version'
+require 'unirest'
+require 'yaml'
+require 'ostruct'
 
 module Upstreamstatus
   extend Forwardable
-
-  require 'unirest'
-  require 'yaml'
-  require 'ostruct'
 
   def_delegators :@conf,
                  :status_check_url
