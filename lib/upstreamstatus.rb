@@ -129,8 +129,6 @@ class Upstreamstatus
   end
 
   def defaults
-    {
-      'status_check_url' => 'http://localhost:8069/status?format=json'
-    }
+    { 'status_check_url' => 'http://localhost:8069/status?format=json' }
   end
 end
