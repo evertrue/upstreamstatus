@@ -68,24 +68,24 @@ class Upstreamstatus
   def fake_servers
     [
       {
-        'index': 0,
-        'upstream': 'testupstream',
-        'name': '10.0.0.1:8080',
-        'status': 'up',
-        'rise': 10_459,
-        'fall': 0,
-        'type': 'http',
-        'port': 0
+        'index' => 0,
+        'upstream' => 'testupstream',
+        'name' => '10.0.0.1 =>8080',
+        'status' => 'up',
+        'rise' => 10_459,
+        'fall' => 0,
+        'type' => 'http',
+        'port' => 0
       },
       {
-        'index': 1,
-        'upstream': 'testupstream',
-        'name': '10.0.0.2:8080',
-        'status': 'down',
-        'rise': 10_029,
-        'fall': 0,
-        'type': 'http',
-        'port': 0
+        'index' => 1,
+        'upstream' => 'testupstream',
+        'name' => '10.0.0.2 =>8080',
+        'status' => 'down',
+        'rise' => 10_029,
+        'fall' => 0,
+        'type' => 'http',
+        'port' => 0
       }
     ]
   end
