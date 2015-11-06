@@ -5,6 +5,7 @@ require 'ostruct'
 require 'trollop'
 require 'forwardable'
 require 'json'
+require 'sentry-raven'
 
 class Upstreamstatus
   extend Forwardable
