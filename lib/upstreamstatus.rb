@@ -50,6 +50,8 @@ class Upstreamstatus
   end
 
   def current_status
+    return fake_servers if opts[:simulate]
+
     r = Unirest.get status_check_url
 
     unless (200..299).include?(r.code)
@@ -62,6 +64,31 @@ class Upstreamstatus
   end
 
   private
+
+  def fake_servers
+    [
+      {
+        'index': 0,
+        'upstream': 'testupstream',
+        'name': '10.0.0.1:8080',
+        'status': 'up',
+        'rise': 10_459,
+        'fall': 0,
+        'type': 'http',
+        'port': 0
+      },
+      {
+        'index': 1,
+        'upstream': 'testupstream',
+        'name': '10.0.0.2:8080',
+        'status': 'down',
+        'rise': 10_029,
+        'fall': 0,
+        'type': 'http',
+        'port': 0
+      }
+    ]
+  end
 
   def clear_active_alerts!
     return unless File.exist? '/var/run/active_upstream_alert'
@@ -112,6 +139,10 @@ class Upstreamstatus
       opt :notify,
           'Notify alert service on failure',
           short: '-n',
+          default: false
+      opt :simulate,
+          'Simulate a failed server',
+          short: '-s',
           default: false
     end
   end
