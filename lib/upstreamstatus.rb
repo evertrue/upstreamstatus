@@ -6,6 +6,7 @@ require 'trollop'
 require 'forwardable'
 require 'json'
 require 'sentry-raven'
+require 'pagerduty'
 
 class Upstreamstatus
   extend Forwardable
