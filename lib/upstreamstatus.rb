@@ -21,7 +21,11 @@ class Upstreamstatus
   def initialize
     @conf = OpenStruct.new load_conf
 
-    return unless opts[:notify] && sentry_dsn
+    return unless opts[:notify]
+
+    fail 'Config missing sentry_dsn' unless sentry_dsn
+    fail 'Config missing pagerduty_api_key' unless pagerduty_api_key
+
     Raven.configure do |config|
       config.dsn = sentry_dsn
       config.logger = logger
