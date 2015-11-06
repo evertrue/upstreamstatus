@@ -50,7 +50,7 @@ class Upstreamstatus
   end
 
   def current_status
-    return fake_servers if opts[:simulate]
+    return fake_response if opts[:simulate]
 
     r = Unirest.get status_check_url
 
@@ -65,29 +65,35 @@ class Upstreamstatus
 
   private
 
-  def fake_servers
-    [
-      {
-        'index' => 0,
-        'upstream' => 'testupstream',
-        'name' => '10.0.0.1 =>8080',
-        'status' => 'up',
-        'rise' => 10_459,
-        'fall' => 0,
-        'type' => 'http',
-        'port' => 0
-      },
-      {
-        'index' => 1,
-        'upstream' => 'testupstream',
-        'name' => '10.0.0.2 =>8080',
-        'status' => 'down',
-        'rise' => 10_029,
-        'fall' => 0,
-        'type' => 'http',
-        'port' => 0
+  def fake_response
+    {
+      'servers' => {
+        'total' => 2,
+        'generation' => 99,
+        'server' => [
+          {
+            'index' => 0,
+            'upstream' => 'testupstream',
+            'name' => '10.0.0.1 =>8080',
+            'status' => 'up',
+            'rise' => 10_459,
+            'fall' => 0,
+            'type' => 'http',
+            'port' => 0
+          },
+          {
+            'index' => 1,
+            'upstream' => 'testupstream',
+            'name' => '10.0.0.2 =>8080',
+            'status' => 'down',
+            'rise' => 10_029,
+            'fall' => 0,
+            'type' => 'http',
+            'port' => 0
+          }
+        ]
       }
-    ]
+    }
   end
 
   def clear_active_alerts!
