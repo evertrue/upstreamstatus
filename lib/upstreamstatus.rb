@@ -38,7 +38,7 @@ class Upstreamstatus
     end
 
     print_hosts down_hosts
-    logger.notice "Detected down hosts: #{down_hosts.to_json}"
+    logger.info "Detected down hosts: #{down_hosts.to_json}"
 
     if opts[:notify]
       puts 'Sending notifications'

@@ -104,7 +104,7 @@ describe Upstreamstatus do
     end
 
     it 'print the list of down hosts' do
-      allow(us).to receive_message_chain(:logger, :notice)
+      allow(us).to receive_message_chain(:logger, :info)
       expect(us).to receive(:print_hosts).with([some_broken_server])
       begin
         us.run
@@ -113,7 +113,7 @@ describe Upstreamstatus do
     end
 
     it 'logs about it' do
-      expect(us).to receive_message_chain(:logger, :notice).with(
+      expect(us).to receive_message_chain(:logger, :info).with(
         "Detected down hosts: #{[some_broken_server].to_json}"
       )
       allow(us).to receive(:print_hosts)
@@ -124,7 +124,7 @@ describe Upstreamstatus do
     end
 
     it 'notifies about it' do
-      allow(us).to receive_message_chain(:logger, :notice)
+      allow(us).to receive_message_chain(:logger, :info)
       allow(us).to receive(:print_hosts)
       expect(us).to receive(:notify).with(
         'One or more API upstream hosts listed as down',
@@ -137,7 +137,7 @@ describe Upstreamstatus do
     end
 
     it 'exit with status 1' do
-      allow(us).to receive_message_chain(:logger, :notice)
+      allow(us).to receive_message_chain(:logger, :info)
       allow(us).to receive(:print_hosts)
       expect { us.run }.to raise_error do |error|
         expect(error).to be_a SystemExit
