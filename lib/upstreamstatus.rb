@@ -23,8 +23,12 @@ class Upstreamstatus
 
     return unless opts[:notify]
 
-    fail 'Config missing sentry_dsn' unless sentry_dsn
-    fail 'Config missing pagerduty_api_key' unless pagerduty_api_key
+    %w(
+      sentry_dsn
+      pagerduty_api_key
+    ).each do |key|
+      fail "Config missing #{key}" unless conf[key]
+    end
 
     Raven.configure do |config|
       config.dsn = sentry_dsn
