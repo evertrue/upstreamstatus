@@ -56,6 +56,19 @@ class Upstreamstatus
       )
     end
     exit 1
+  rescue Interrupt => e
+    puts "Received #{e.class}"
+    exit 99
+  rescue SignalException => e
+    logger.info "Received: #{e.signm} (#{e.signo})"
+    exit 2
+  rescue SystemExit => e
+    exit e.status
+  rescue Exception => e # Need to rescue "Exception" so that Sentry gets it
+    Raven.capture_exception(e) if sentry_dsn
+    logger.fatal e.message
+    logger.fatal e.backtrace.join("\n")
+    raise e
   end
 
   def current_status
@@ -142,8 +155,6 @@ class Upstreamstatus
         }.to_json
       )
     end
-
-    Raven.capture_exception(e) if sentry_dsn
   end
 
   def active_alert?(msg)
