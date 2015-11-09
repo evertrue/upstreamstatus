@@ -45,11 +45,11 @@ class Upstreamstatus
       exit 0
     end
 
+    puts "Detected down hosts:\n"
     print_hosts down_hosts
     logger.info "Detected down hosts: #{down_hosts.to_json}"
 
     if opts[:notify]
-      puts 'Sending notifications'
       notify(
         'One or more API upstream hosts listed as down',
         JSON.pretty_generate(down_hosts)
@@ -119,7 +119,10 @@ class Upstreamstatus
   end
 
   def notify(msg, details)
-    unless active_alert?(msg)
+    if active_alert?(msg)
+      puts "Already an active alert. Not sending anything (message: #{msg})"
+    else
+      puts "Notifying PagerDuty (message: #{msg})"
       pd = pagerduty.trigger(
         msg,
         client: ENV['hostname'],
