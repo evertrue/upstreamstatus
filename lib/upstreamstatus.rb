@@ -1,4 +1,5 @@
 require 'upstreamstatus/version'
+require 'active_support/time'
 require 'unirest'
 require 'yaml'
 require 'ostruct'
@@ -7,6 +8,7 @@ require 'forwardable'
 require 'json'
 require 'sentry-raven'
 require 'pagerduty'
+require 'time'
 
 class Upstreamstatus
   extend Forwardable
@@ -14,7 +16,10 @@ class Upstreamstatus
   def_delegators :@conf,
                  :status_check_url,
                  :sentry_dsn,
-                 :pagerduty_api_key
+                 :pagerduty_api_url,
+                 :pagerduty_service_id,
+                 :pagerduty_api_key,
+                 :pagerduty_rest_api_key
 
   attr_reader :conf
 
@@ -26,9 +31,16 @@ class Upstreamstatus
     %w(
       sentry_dsn
       pagerduty_api_key
+      pagerduty_rest_api_key
+      pagerduty_api_url
+      pagerduty_service_id
     ).each do |key|
       fail "Config missing #{key}" unless conf[key]
     end
+
+    Unirest.default_header 'Authorization',
+                           "Token token=#{pagerduty_rest_api_key}"
+    Unirest.default_header 'Content-type', 'application/json'
 
     Raven.configure do |config|
       config.dsn = sentry_dsn
@@ -87,6 +99,17 @@ class Upstreamstatus
 
   private
 
+  def pd_incidents
+    @pd_incidents ||= begin
+      r = Unirest.get(
+        "#{pagerduty_api_url}/incidents",
+        parameters: { service: pagerduty_service_id }
+      )
+      fail "Result: #{r.inspect}" unless (200..299).include?(r.code)
+      r.body['incidents']
+    end
+  end
+
   def fake_response
     {
       'servers' => {
@@ -119,8 +142,15 @@ class Upstreamstatus
   end
 
   def clear_active_alerts!
-    return unless File.exist? '/var/run/active_upstream_alert'
-    File.delete('/var/run/active_upstream_alert')
+    return unless opts[:notify]
+    pd_incidents.each do |i|
+      resolve_incident i['incident_key'] unless i['status'] == 'resolved'
+    end
+  end
+
+  def resolve_incident(incident_key)
+    puts "Resolving incident: #{incident_key}"
+    pagerduty.get_incident(incident_key).resolve
   end
 
   def logger
@@ -158,9 +188,10 @@ class Upstreamstatus
   end
 
   def active_alert?(msg)
-    File.exist?('/var/run/active_upstream_alert') &&
-      (Time.now - File.ctime('/var/run/active_upstream_alert')) < 3600 &&
-      JSON.parse(File.read('/var/run/active_upstream_alert'))['msg'] == msg
+    pd_incidents.find do |incident|
+      incident['status'] != 'resolved' &&
+        incident['trigger_summary_data']['description'] == msg
+    end
   end
 
   def opts

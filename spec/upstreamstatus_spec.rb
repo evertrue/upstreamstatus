@@ -69,18 +69,7 @@ describe Upstreamstatus do
           code: 200
         )
       )
-    end
-
-    it 'clear the active alerts file' do
-      allow(File).to receive(:exist?).and_call_original
-      allow(File).to receive(:exist?).with('/var/run/active_upstream_alert')
-        .and_return true
-      expect(File).to receive(:delete).with('/var/run/active_upstream_alert')
-        .and_return 1
-      begin
-        us.run
-      rescue SystemExit
-      end
+      allow(us).to receive(:pd_incidents).and_return([])
     end
 
     it 'exit with status 0' do
@@ -101,6 +90,7 @@ describe Upstreamstatus do
           code: 200
         )
       )
+      allow(us).to receive(:pd_incidents).and_return([])
     end
 
     it 'print the list of down hosts' do
