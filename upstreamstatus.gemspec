@@ -31,7 +31,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'trollop', '~> 2.1'
   spec.add_dependency 'sentry-raven'
   spec.add_dependency 'pagerduty'
-  spec.add_dependency 'activesupport'
+  spec.add_dependency 'activesupport', '< 5.0' # >= 5.0 requires Ruby 2.2
 
   spec.add_development_dependency 'bundler', '~> 1.10'
   spec.add_development_dependency 'rake', '~> 10.0'
