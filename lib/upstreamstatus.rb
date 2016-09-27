@@ -9,6 +9,8 @@ require 'json'
 require 'sentry-raven'
 require 'pagerduty'
 require 'time'
+require 'socket'
+require 'byebug'
 
 class Upstreamstatus
   extend Forwardable
@@ -48,24 +50,26 @@ class Upstreamstatus
     end
   end
 
-  def run
-    down_hosts =
-      current_status['servers']['server'].select { |s| s['status'] != 'up' }
+  def down_hosts
+    current_status['servers']['server'].select { |s| s['status'] != 'up' }
+  end
 
-    if down_hosts.empty?
-      clear_active_alerts!
-      exit 0
-    end
+  def run
+    clear_active_alerts
+
+    exit 0 if down_hosts.empty?
 
     puts "Detected down hosts:\n"
     print_hosts down_hosts
     logger.info "Detected down hosts: #{down_hosts.to_json}"
 
     if opts[:notify]
-      notify(
-        'One or more API upstream hosts listed as down',
-        JSON.pretty_generate(down_hosts)
-      )
+      down_hosts.each do |host|
+        notify(
+          "Upstream host #{host['upstream']} listed as down",
+          host
+        )
+      end
     end
     exit 1
   rescue Interrupt => e
@@ -84,73 +88,71 @@ class Upstreamstatus
   end
 
   def current_status
-    return fake_response if opts[:simulate]
+    @current_status ||= begin
+      return fake_response if opts[:simulate]
 
-    r = Unirest.get status_check_url
+      r = Unirest.get status_check_url
 
-    unless (200..299).include?(r.code)
-      fail "Error code: #{r.code}\n" \
-           "Headers: #{r.headers}" \
-           "Body: #{r.body}"
+      unless (200..299).include?(r.code)
+        fail "Error code: #{r.code}\n" \
+             "Headers: #{r.headers}" \
+             "Body: #{r.body}"
+      end
+
+      r.body
     end
-
-    r.body
   end
 
   private
 
-  def pd_incidents
-    @pd_incidents ||= begin
-      r = Unirest.get(
-        "#{pagerduty_api_url}/incidents",
-        parameters: { service: pagerduty_service_id }
+  def notify(msg, host)
+    if active_alert?(host['upstream'])
+      puts "Already an active alert. Not sending anything (message: #{msg})"
+    else
+      puts "Notifying PagerDuty (message: #{msg})"
+      pagerduty.trigger(
+        msg,
+        incident_key: "upstreamstatus #{Socket.gethostname} #{host['upstream']}",
+        client: Socket.gethostname,
+        details: host
       )
-      fail "Result: #{r.inspect}" unless (200..299).include?(r.code)
-      r.body['incidents']
     end
   end
 
-  def fake_response
-    {
-      'servers' => {
-        'total' => 2,
-        'generation' => 99,
-        'server' => [
-          {
-            'index' => 0,
-            'upstream' => 'testupstream',
-            'name' => '10.0.0.1 =>8080',
-            'status' => 'up',
-            'rise' => 10_459,
-            'fall' => 0,
-            'type' => 'http',
-            'port' => 0
-          },
-          {
-            'index' => 1,
-            'upstream' => 'testupstream',
-            'name' => '10.0.0.2 =>8080',
-            'status' => 'down',
-            'rise' => 10_029,
-            'fall' => 0,
-            'type' => 'http',
-            'port' => 0
-          }
-        ]
+  def active_alert?(host)
+    active_alerts.find do |a|
+      a['incident_key'] == "upstreamstatus #{Socket.gethostname} #{host['upstream']}"
+    end
+  end
+
+  def active_alerts
+    @active_alerts ||= active_alerts_paged
+  end
+
+  def active_alerts_paged(offset = 0)
+    r = Unirest.get(
+      "#{pagerduty_api_url}/incidents",
+      parameters: {
+        service: pagerduty_service_id,
+        status: 'triggered,acknowledged',
+        offset: offset
       }
-    }
+    )
+    fail "Result: #{r.inspect}" unless (200..299).include?(r.code)
+    pointer = r.body['limit'] + offset
+    r.body['incidents'] + (pointer < r.body['total'] ? active_alerts_paged(pointer) : [])
   end
 
-  def clear_active_alerts!
+  def clear_active_alerts
     return unless opts[:notify]
-    pd_incidents.each do |i|
-      resolve_incident i['incident_key'] unless i['status'] == 'resolved'
+    active_alerts.reject { |a| down_hosts_incident_keys.include? a['incident_key'] }.each do |a|
+      puts "Resolving incident: #{a['incident_key']}"
+      pagerduty.get_incident(a['incident_key']).resolve
     end
   end
 
-  def resolve_incident(incident_key)
-    puts "Resolving incident: #{incident_key}"
-    pagerduty.get_incident(incident_key).resolve
+  def down_hosts_incident_keys
+    down_hosts.map { |host| "upstreamstatus #{Socket.gethostname} #{host['upstream']}" }
   end
 
   def logger
@@ -159,39 +161,6 @@ class Upstreamstatus
 
   def pagerduty
     @pagerduty ||= Pagerduty.new pagerduty_api_key
-  end
-
-  def notify(msg, details)
-    if active_alert?(msg)
-      puts "Already an active alert. Not sending anything (message: #{msg})"
-    else
-      puts "Notifying PagerDuty (message: #{msg})"
-      pd = pagerduty.trigger(
-        msg,
-        client: ENV['hostname'],
-        details: details
-      )
-
-      # You may have noticed that this will overwrite any previously active
-      # alerts, regardless of whether they are the "same" alert. This is a known
-      # limitation.
-
-      File.write(
-        '/var/run/active_upstream_alert',
-        {
-          'Incident Key' => pd.incident_key,
-          'Message' => msg,
-          'Details' => details
-        }.to_json
-      )
-    end
-  end
-
-  def active_alert?(msg)
-    pd_incidents.find do |incident|
-      incident['status'] != 'resolved' &&
-        incident['trigger_summary_data']['description'] == msg
-    end
   end
 
   def opts
@@ -222,5 +191,46 @@ class Upstreamstatus
 
   def defaults
     { 'status_check_url' => 'http://localhost:8069/status?format=json' }
+  end
+
+  def fake_response
+    {
+      'servers' => {
+        'total' => 2,
+        'generation' => 99,
+        'server' => [
+          {
+            'index' => 0,
+            'upstream' => 'testupstream0',
+            'name' => '10.0.0.1 =>8080',
+            'status' => 'up',
+            'rise' => 10_459,
+            'fall' => 0,
+            'type' => 'http',
+            'port' => 0
+          },
+          {
+            'index' => 1,
+            'upstream' => 'testupstream1',
+            'name' => '10.0.0.2 =>8080',
+            'status' => 'down',
+            'rise' => 10_029,
+            'fall' => 0,
+            'type' => 'http',
+            'port' => 0
+          },
+          {
+            'index' => 2,
+            'upstream' => 'testupstream2',
+            'name' => '10.0.0.2 =>8080',
+            'status' => 'down',
+            'rise' => 10_029,
+            'fall' => 0,
+            'type' => 'http',
+            'port' => 0
+          }
+        ]
+      }
+    }
   end
 end
