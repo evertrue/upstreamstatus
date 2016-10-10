@@ -126,7 +126,9 @@ class Upstreamstatus
   end
 
   def active_alerts
-    @active_alerts ||= active_alerts_paged
+    @active_alerts ||= active_alerts_paged.select do |a|
+      a['incident_key'] =~ /^upstreamstatus #{Socket.gethostname} .*/
+    end
   end
 
   def active_alerts_paged(offset = 0)
