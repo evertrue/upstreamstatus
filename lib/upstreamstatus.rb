@@ -43,6 +43,7 @@ class Upstreamstatus
     Unirest.default_header 'Authorization',
                            "Token token=#{pagerduty_rest_api_key}"
     Unirest.default_header 'Content-type', 'application/json'
+    Unirest.default_header 'Accept', 'application/vnd.pagerduty+json;version=2'
 
     Raven.configure do |config|
       config.dsn = sentry_dsn
@@ -133,12 +134,7 @@ class Upstreamstatus
 
   def active_alerts_paged(offset = 0)
     r = Unirest.get(
-      "#{pagerduty_api_url}/incidents",
-      parameters: {
-        service: pagerduty_service_id,
-        status: 'triggered,acknowledged',
-        offset: offset
-      }
+      "#{pagerduty_api_url}/incidents?service_ids[]=#{pagerduty_service_id}&statuses[]=triggered&statuses[]=acknowledged&offset=#{offset}"
     )
     fail "Result: #{r.inspect}" unless (200..299).include?(r.code)
     pointer = r.body['limit'] + offset
