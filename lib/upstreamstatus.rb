@@ -137,6 +137,8 @@ class Upstreamstatus
       "#{pagerduty_api_url}/incidents?service_ids[]=#{pagerduty_service_id}&statuses[]=triggered&statuses[]=acknowledged&offset=#{offset}"
     )
     fail "Result: #{r.inspect}" unless (200..299).include?(r.code)
+    return [] if r.body['total'].nil?
+
     pointer = r.body['limit'] + offset
     r.body['incidents'] + (pointer < r.body['total'] ? active_alerts_paged(pointer) : [])
   end
