@@ -28,7 +28,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ['lib']
 
   spec.add_dependency 'unirest', '~> 1.1'
-  spec.add_dependency 'trollop', '~> 2.1'
+  spec.add_dependency 'optimist', '~> 3.0'
   spec.add_dependency 'sentry-raven'
   spec.add_dependency 'pagerduty'
   spec.add_dependency 'activesupport', '< 5.0' # >= 5.0 requires Ruby 2.2

@@ -3,7 +3,7 @@ require 'active_support/time'
 require 'unirest'
 require 'yaml'
 require 'ostruct'
-require 'trollop'
+require 'optimist'
 require 'forwardable'
 require 'json'
 require 'sentry-raven'
@@ -164,7 +164,7 @@ class Upstreamstatus
   end
 
   def opts
-    @opts ||= Trollop.options do
+    @opts ||= Optimist.options do
       opt :notify,
           'Notify alert service on failure',
           short: '-n',
