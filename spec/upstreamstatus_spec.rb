@@ -117,8 +117,8 @@ describe Upstreamstatus do
       allow(us).to receive_message_chain(:logger, :info)
       allow(us).to receive(:print_hosts)
       expect(us).to receive(:notify).with(
-        'One or more API upstream hosts listed as down',
-        JSON.pretty_generate([some_broken_server])
+        'Upstream host broken-host listed as down',
+        some_broken_server
       )
       begin
         us.run
